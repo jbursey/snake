@@ -24,6 +24,8 @@ const Game = () => {
 
     let snakeSize:number = 25;
 
+    let foodPos : Point = { x: 50, y: 50};
+
     //--effects
     useEffect(() => {
         console.log("Use effect [] called");        
@@ -32,6 +34,10 @@ const Game = () => {
         then = new Date();
 
         window.addEventListener("keydown", onKeyboardEvent);
+        width = window.screen.width
+        height = window.innerHeight;
+        canvasRef.current.width = width;
+        canvasRef.current.height = height;        
 
         context = canvasRef.current.getContext("2d");       
         context.fillStyle = "#000";
@@ -39,20 +45,7 @@ const Game = () => {
 
         window.requestAnimationFrame(render);
 
-        snakePos.push({x: 50, y: 50}); //head
-        snakePos.push({x: 10, y: 50}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
-        snakePos.push({x: 10, y: 20}); //head
+        snakePos.push({x: 500, y: 500}); //head
     }, []);
 
     useEffect(() => {
@@ -72,14 +65,14 @@ const Game = () => {
 
         if(dt > 1000)
         {
-            console.log("Frames: ", frames, "FTS: ", framesThisSecond, "DT: ", dt, "FPS: ", framesThisSecond / (dt / 1000.0)); 
+            //console.log("Frames: ", frames, "FTS: ", framesThisSecond, "DT: ", dt, "FPS: ", framesThisSecond / (dt / 1000.0)); 
             dt = 0;
-            framesThisSecond = 0;    
-            moveSnake("ArrowRight");
+            framesThisSecond = 0;                
         }
 
         //--app
         renderSnake();
+        renderFood();
 
         window.requestAnimationFrame(render);
     }
@@ -87,15 +80,39 @@ const Game = () => {
     const renderSnake = () => {
         snakePos.map((part: Point) => {
             context.fillStyle = "#00FF00";
-            context.fillRect(part.x, part.y, snakeSize, snakeSize);
-            //context.fillRect(5,5,10,10);
+            context.fillRect(part.x, part.y, snakeSize, snakeSize);                        
         });        
+    };
+
+    const renderFood = () => {
+        context.fillStyle = "#FF0000";
+        context.fillRect(foodPos.x, foodPos.y, snakeSize, snakeSize);
     };
 
     const clearCanvas = () => {
         context.fillStyle = "#000";
         context.fillRect(0, 0, width, height);        
     }
+
+    const eatFood = () => {
+        //grow the snake
+        snakePos.push({
+            x: foodPos.x,
+            y: foodPos.y
+        });
+
+        //move the food        
+        let newX = Math.floor((Math.random() * 10000) % width);
+        let newY = Math.floor((Math.random() * 10000) % height);
+        newX = newX - (newX % snakeSize);
+        newY = newY - (newY % snakeSize);
+
+        foodPos.x = newX;
+        foodPos.y = newY;        
+
+
+        console.log(foodPos);
+    };
 
     const moveSnake = (directionCode: string) => {
         let newHead : Point = {
@@ -160,6 +177,18 @@ const Game = () => {
 
             }
         }
+
+        for(let i = 0; i < snakePos.length; i++)
+        {
+            let part = snakePos[i];
+
+            if(part.x == foodPos.x && part.y == foodPos.y)
+            {
+                eatFood();
+            }
+        }
+
+
     };
 
     const onKeyboardEvent = (event: KeyboardEvent) => {
@@ -169,7 +198,7 @@ const Game = () => {
     };
 
     return (
-        <canvas id="game-screen" ref={canvasRef} width={1200} height={800}></canvas>
+        <canvas id="game-screen" ref={canvasRef}></canvas>
     )    
 }
 
