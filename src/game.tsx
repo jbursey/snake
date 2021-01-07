@@ -25,6 +25,8 @@ const Game = () => {
     let snakeSize:number = 25;
 
     let foodPos : Point = { x: 50, y: 50};
+    let lastKnownKey = "";
+    let milliSecondDelay = 300;
 
     //--effects
     useEffect(() => {
@@ -63,11 +65,12 @@ const Game = () => {
         frames++;
         framesThisSecond++;
 
-        if(dt > 1000)
+        if(dt > milliSecondDelay)
         {
             //console.log("Frames: ", frames, "FTS: ", framesThisSecond, "DT: ", dt, "FPS: ", framesThisSecond / (dt / 1000.0)); 
             dt = 0;
             framesThisSecond = 0;                
+            moveSnake(lastKnownKey);
         }
 
         //--app
@@ -109,9 +112,8 @@ const Game = () => {
 
         foodPos.x = newX;
         foodPos.y = newY;        
-
-
-        console.log(foodPos);
+        
+        milliSecondDelay = milliSecondDelay * 0.8;
     };
 
     const moveSnake = (directionCode: string) => {
@@ -135,8 +137,7 @@ const Game = () => {
                 newHead.x += snakeSize;
                 break;
             default:
-
-                break;
+                return; //do nothing                
         }
                 
         let newSnake: Array<Point> = [];
@@ -193,8 +194,8 @@ const Game = () => {
 
     const onKeyboardEvent = (event: KeyboardEvent) => {
         console.log(event);
-
-        moveSnake(event.key);
+        lastKnownKey = event.key;
+        //moveSnake(event.key);
     };
 
     return (

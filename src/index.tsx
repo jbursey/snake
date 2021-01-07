@@ -5,6 +5,9 @@ import Game from "./game"
 const App = (props: any) => {
     return (
         <Game />
+        // game controls component / start and stop
+        // game over component
+        // current score component        
     )    
 }
 
