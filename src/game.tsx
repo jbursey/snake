@@ -1,12 +1,16 @@
 import * as React from "react";
 import {useEffect, useRef} from "react";
 
-interface Point {
+export interface Point {
     x:number,
     y:number
 }
 
-const Game = () => {
+export interface GameProps {
+    onGamePause() : void;
+}
+
+const Game = (props: GameProps) => {
     const canvasRef = useRef<HTMLCanvasElement>();
     let context : CanvasRenderingContext2D = null;
     let frames:number = 0;
@@ -28,12 +32,16 @@ const Game = () => {
     let lastKnownKey = "";
     let milliSecondDelay = 300;
 
+    let handleAnimationFrame : number = 0;;
+
     //--effects
     useEffect(() => {
         console.log("Use effect [] called");        
         console.log(canvasRef);        
         
         then = new Date();
+
+        handleAnimationFrame = 0;
 
         window.addEventListener("keydown", onKeyboardEvent);
         width = window.screen.width
@@ -45,7 +53,7 @@ const Game = () => {
         context.fillStyle = "#000";
         context.fillRect(0, 0, width, height);        
 
-        window.requestAnimationFrame(render);
+        handleAnimationFrame = window.requestAnimationFrame(render);
 
         snakePos.push({x: 500, y: 500}); //head
     }, []);
@@ -77,7 +85,7 @@ const Game = () => {
         renderSnake();
         renderFood();
 
-        window.requestAnimationFrame(render);
+        handleAnimationFrame = window.requestAnimationFrame(render);
     }
 
     const renderSnake = () => {
@@ -105,8 +113,8 @@ const Game = () => {
         });
 
         //move the food        
-        let newX = Math.floor((Math.random() * 10000) % width);
-        let newY = Math.floor((Math.random() * 10000) % height);
+        let newX = Math.floor((Math.random() * 10000) % (width - snakeSize));
+        let newY = Math.floor((Math.random() * 10000) % (height - snakeSize));
         newX = newX - (newX % snakeSize);
         newY = newY - (newY % snakeSize);
 
@@ -135,6 +143,10 @@ const Game = () => {
                 break;
             case "ArrowRight":
                 newHead.x += snakeSize;
+                break;
+            case "Escape":
+                props.onGamePause();
+                window.cancelAnimationFrame(handleAnimationFrame);
                 break;
             default:
                 return; //do nothing                
