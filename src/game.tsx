@@ -8,6 +8,11 @@ export interface Point {
 
 export interface GameProps {
     onGamePause() : void;
+    snakePosition: Point[];
+    foodPosition: Point;
+    updateDelayMS: number;
+    lastKnownKey: string;
+    snakeSize: number;
 }
 
 const Game = (props: GameProps) => {
@@ -56,10 +61,17 @@ const Game = (props: GameProps) => {
         handleAnimationFrame = window.requestAnimationFrame(render);
 
         snakePos.push({x: 500, y: 500}); //head
+
+        return () => {
+            console.log("Use effect [] UNMOUNTED");
+        };
     }, []);
 
     useEffect(() => {
         console.log("Use effect NULL called");
+        return () => {
+            console.log("Use effect NULL UNMOUNTED");
+        }
     });
 
     const render = ()=> {      

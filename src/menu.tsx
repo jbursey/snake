@@ -2,7 +2,7 @@ import * as React from "react";
 import styled from 'styled-components';
 
 interface GameMenuProps {
-    onGameStart() : void;
+    onMenuItemSelected(name: string) : void;
 }
 
 const StyledMenuDiv = styled.div`
@@ -14,6 +14,10 @@ const StyledMenuDiv = styled.div`
     flex-direction: column;
     justify-content: center;
     align-items: center;
+    position: absolute;
+    left: calc(50% - 175px);
+    top: 0;
+    z-index: 10;s
 `;
 
 const StyledMenuItem = styled.div`
@@ -31,12 +35,21 @@ const StyledMenuItem = styled.div`
     }
 `;
 
+// export interface GameMenuItemProps {
+//     name: string
+//     onItemSelected();
+//     children: JSX.Element;
+// }
+
+// const GameMenuItem = (props : GameMenuItemProps) => {
+//     return (
+//         <div onClick={props.onItemSelected(props.name)}>
+//         {props.children}
+//         </div>
+//     )
+// }
 
 const GameMenu = (props: GameMenuProps) => {
-    const onMenuItemClick = (event: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-        console.log(event);
-        props.onGameStart();
-    }
     
     const menuItems = ["Start", "High Scores", "Options"];
 
@@ -45,7 +58,7 @@ const GameMenu = (props: GameMenuProps) => {
             {
                 menuItems.map((item: string) => {
                     return (
-                    <StyledMenuItem key={item} onClick={onMenuItemClick}>{item}</StyledMenuItem>
+                        <StyledMenuItem key={item} onClick={(event : React.MouseEvent<HTMLDivElement, MouseEvent>) => {props.onMenuItemSelected(item);} }>{item}</StyledMenuItem>
                     )   
                 })
             }
