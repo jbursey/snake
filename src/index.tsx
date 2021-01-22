@@ -3,53 +3,84 @@ import {useState, useEffect} from "react"
 import * as ReactDom from "react-dom"
 import Game from "./game"
 import Menu from "./menu"
-import Scene from "./scene"
+import RenderTarget from "./renderTarget"
+import { GameState, KeyCode, Point } from "./models"
 
-interface AppState {
-    gameRunning: Boolean;
-
+const initialState: GameState = {
+    cellSize: 20,
+    height: window.innerHeight,
+    width: window.innerWidth,
+    lastKnownKeyCode: KeyCode.NONE,
+    updateDelayMS: 500,
+    foodPosition: {
+        x: 20,
+        y: 20
+    },
+    snakePosition: [{x: 100, y: 100}]
 }
 
 const App = (props: any) => {
-    let foo = true;
-    const[gameRunning, setGameRunning] = useState<boolean>(false);
+    const [gameState, setGameState] = useState<GameState>(initialState);
+
+    const onKeyPress = (event : KeyboardEvent) => {
+        let keyCode : KeyCode = KeyCode.NONE;
+        switch(event.key)
+        {
+            case "ArrowUp":
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.UP});
+                keyCode = KeyCode.UP;
+                break;
+            case "ArrowDown":
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.DOWN});
+                keyCode = KeyCode.DOWN;
+                break;
+            case "ArrowLeft":
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.LEFT});
+                keyCode = KeyCode.LEFT;
+                break;
+            case "ArrowRight":
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.RIGHT});
+                keyCode = KeyCode.RIGHT;
+                break;
+            case "Escape":
+            default:
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.ESC});
+                keyCode = KeyCode.ESC;
+                break;
+        }
+
+        //--move snake
+        moveSnake(keyCode)
+    }
+
+    const moveSnake = (keyCode : KeyCode) => {
+        let pos : Point = {
+            x: gameState.snakePosition[0].x,
+            y: gameState.snakePosition[0].y
+        }
+
+        switch(keyCode)
+        {
+            case KeyCode.UP:
+                pos.y -= gameState.cellSize;
+                break;
+            case KeyCode.DOWN:
+                pos.y += gameState.cellSize;
+                break;
+            case KeyCode.LEFT:
+                pos.x -= gameState.cellSize;
+                break;
+            case KeyCode.RIGHT:
+                pos.x += gameState.cellSize;
+                break;
+        }
+        console.log("Moving snake: ", pos, keyCode);
+        setGameState({...gameState, snakePosition: [pos], lastKnownKeyCode: keyCode});
+    };
 
     useEffect(() => {
-        console.log("App effect []");
-
+        window.onkeyup = onKeyPress;
     }, []);
-
-    useEffect(() => {
-        console.log("Use Effect game running changed:", gameRunning);
-        setTimeout(() => {
-            console.log("Game running: ", gameRunning);
-            //setGameRunning(!gameRunning);
-        }, 1000);
-    }, [gameRunning]);
-
-    useEffect(() => {
-        console.log("App effect NULL");
-    });
-
-    const onGameStart = () => {
-        setGameRunning(true);
-    }
-
-    const onGamePause = () => {
-        setGameRunning(false);
-    }
-
-    const onFoodEaten = () => {
-
-    }
-
-    const startGame = () => {
-
-    }
-
-    const pauseGame = () => {
-
-    }
 
     const onMenuItemSelected = (name: string) => {
         
@@ -67,17 +98,9 @@ const App = (props: any) => {
         }
     }
 
-
-        // game controls component / start and stop
-        // game over component
-        // current score component
-
-        //--{gameRunning ? <Game onGamePause={onGamePause}/> : <Menu onGameStart={onGameStart} />}
-        //--{gameRunning && <Game onGamePause={onGamePause}/>}
-
     return (
         <>
-        <Scene />
+        <RenderTarget {...gameState} />
         <Menu onMenuItemSelected={onMenuItemSelected} />
         </>        
     )    

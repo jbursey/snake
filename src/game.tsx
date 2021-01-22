@@ -1,10 +1,6 @@
 import * as React from "react";
 import {useEffect, useRef} from "react";
-
-export interface Point {
-    x:number,
-    y:number
-}
+import {Point} from "./models"
 
 export interface GameProps {
     onGamePause() : void;
