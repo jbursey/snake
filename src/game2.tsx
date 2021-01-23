@@ -2,7 +2,7 @@ import * as React from "react";
 import {useRef, useEffect} from "react"
 import {GameState, KeyCode, Point} from "./models";
 
-const Game2 = (props : any) => {
+const Game2 = React.memo((props : any) => {
     let state : GameState;
     let canvas: HTMLCanvasElement;
     let context: CanvasRenderingContext2D;
@@ -17,18 +17,22 @@ const Game2 = (props : any) => {
         {
             case "ArrowUp":
                 //setGameState({...gameState, lastKnownKeyCode: KeyCode.UP});
+                if(state.lastKnownKeyCode == KeyCode.DOWN) return;
                 keyCode = KeyCode.UP;
                 break;
             case "ArrowDown":
                 //setGameState({...gameState, lastKnownKeyCode: KeyCode.DOWN});
+                if(state.lastKnownKeyCode == KeyCode.UP) return;
                 keyCode = KeyCode.DOWN;
                 break;
             case "ArrowLeft":
                 //setGameState({...gameState, lastKnownKeyCode: KeyCode.LEFT});
+                if(state.lastKnownKeyCode == KeyCode.RIGHT) return;
                 keyCode = KeyCode.LEFT;
                 break;
             case "ArrowRight":
                 //setGameState({...gameState, lastKnownKeyCode: KeyCode.RIGHT});
+                if(state.lastKnownKeyCode == KeyCode.LEFT) return;
                 keyCode = KeyCode.RIGHT;
                 break;
             case "Escape":
@@ -52,10 +56,6 @@ const Game2 = (props : any) => {
     const draw = (gameState: GameState, context: CanvasRenderingContext2D) => {
         //console.log("RenderTarget draw");
 
-        //food
-        context.fillStyle = "#FF0000";
-        context.fillRect(gameState.foodPosition.x, gameState.foodPosition.y, gameState.cellSize, gameState.cellSize);
-
         //snake
         let first: boolean = false;
         gameState.snakePosition.forEach((part: Point) => {
@@ -71,6 +71,10 @@ const Game2 = (props : any) => {
             
             context.fillRect(part.x, part.y, gameState.cellSize, gameState.cellSize);
         });
+
+        //food
+        context.fillStyle = "#FF0000";
+        context.fillRect(gameState.foodPosition.x, gameState.foodPosition.y, gameState.cellSize, gameState.cellSize);
     }
 
     const moveSnake = () => {
@@ -167,6 +171,40 @@ const Game2 = (props : any) => {
         }
     };
 
+    const checkForGameOver = () => {
+        // if snake is out of bounds
+        let head = state.snakePosition[0];
+        if(head.x > state.width || head.x < 0)
+        {
+            alert("Game Over: " + state.snakePosition.length);
+            resetGame();
+        }
+        else if(head.y > state.height || head.y < 0)
+        {
+            alert("Game Over: " + state.snakePosition.length);
+            resetGame();
+        }
+
+        // if snake is intersecting with itself
+        for(let i = 1; i < state.snakePosition.length; i++)
+        {
+            let part = state.snakePosition[i];
+            if(head.x == part.x && head.y == part.y)
+            {
+                alert("Game Over: " + state.snakePosition.length);
+                resetGame();
+                break;
+            }
+        }
+    };
+
+    const resetGame = () => {
+        state.lastKnownKeyCode = KeyCode.NONE;
+        state.snakePosition = [];
+        state.snakePosition.push(getRandomCellPosition());
+        state.foodPosition = getRandomCellPosition();
+    };
+
     const render = () => {
         let now : Date = new Date();
 
@@ -183,6 +221,8 @@ const Game2 = (props : any) => {
             moveSnake();
             //check for food eaten
             tryEatFood();
+            //check for game over
+            checkForGameOver();
 
             msSinceUpdate = 0;
         }
@@ -196,11 +236,11 @@ const Game2 = (props : any) => {
         then = new Date();
         msSinceUpdate = 0;
         state = {
-            cellSize: 20,
+            cellSize: 50,
             height: window.innerHeight,
             width: window.innerWidth,
             lastKnownKeyCode: KeyCode.NONE,
-            updateDelayMS: 200,
+            updateDelayMS: 100,
             foodPosition: {x: 0, y: 0},
             snakePosition: [{
                 x: 50,
@@ -228,6 +268,6 @@ const Game2 = (props : any) => {
     return (
         <canvas ref={canvasRef}></canvas>
     )
-}
+});
 
 export default Game2;
