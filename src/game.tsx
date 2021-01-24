@@ -1,226 +1,280 @@
 import * as React from "react";
-import {useEffect, useRef} from "react";
-import {Point} from "./models"
+import {useRef, useEffect} from "react"
+import {GameState, KeyCode, Point} from "./models";
 
 export interface GameProps {
-    onGamePause() : void;
-    snakePosition: Point[];
-    foodPosition: Point;
-    updateDelayMS: number;
-    lastKnownKey: string;
-    snakeSize: number;
+    onGameOver() : void;
+    onScoreUpdate() : void;
 }
 
-const Game = (props: GameProps) => {
-    const canvasRef = useRef<HTMLCanvasElement>();
-    let context : CanvasRenderingContext2D = null;
-    let frames:number = 0;
-    let framesThisSecond:number = 0;
-    let dt = 0;
-    let then:Date = new Date();
-    
-    //--snake components
-    //--snake head position
-    //--eventually this should be an array, with arr[0] being the snake head. Then each new cell is the previous cells pos and the head is calculated
-    let width: number = 1200;
-    let height: number = 800;
+const Game = React.memo((props : GameProps) => {
+    let state : GameState;
+    let canvas: HTMLCanvasElement;
+    let context: CanvasRenderingContext2D;
+    let canvasRef = useRef<HTMLCanvasElement>(null);
+    let reqAnimationFrame : number;
+    let then: Date;
+    let msSinceUpdate : number;
 
-    let snakePos: Array<Point> = [];    
-
-    let snakeSize:number = 25;
-
-    let foodPos : Point = { x: 50, y: 50};
-    let lastKnownKey = "";
-    let milliSecondDelay = 300;
-
-    let handleAnimationFrame : number = 0;;
-
-    //--effects
-    useEffect(() => {
-        console.log("Use effect [] called");        
-        console.log(canvasRef);        
-        
-        then = new Date();
-
-        handleAnimationFrame = 0;
-
-        window.addEventListener("keydown", onKeyboardEvent);
-        width = window.screen.width
-        height = window.innerHeight;
-        canvasRef.current.width = width;
-        canvasRef.current.height = height;        
-
-        context = canvasRef.current.getContext("2d");       
-        context.fillStyle = "#000";
-        context.fillRect(0, 0, width, height);        
-
-        handleAnimationFrame = window.requestAnimationFrame(render);
-
-        snakePos.push({x: 500, y: 500}); //head
-
-        return () => {
-            console.log("Use effect [] UNMOUNTED");
-        };
-    }, []);
-
-    useEffect(() => {
-        console.log("Use effect NULL called");
-        return () => {
-            console.log("Use effect NULL UNMOUNTED");
-        }
-    });
-
-    const render = ()=> {      
-        clearCanvas();  
-        const now : Date = new Date();
-
-        const ms : number = now.getTime() - then.getTime();
-        then = now;
-
-        dt += ms;
-        frames++;
-        framesThisSecond++;
-
-        if(dt > milliSecondDelay)
-        {
-            //console.log("Frames: ", frames, "FTS: ", framesThisSecond, "DT: ", dt, "FPS: ", framesThisSecond / (dt / 1000.0)); 
-            dt = 0;
-            framesThisSecond = 0;                
-            moveSnake(lastKnownKey);
-        }
-
-        //--app
-        renderSnake();
-        renderFood();
-
-        handleAnimationFrame = window.requestAnimationFrame(render);
-    }
-
-    const renderSnake = () => {
-        snakePos.map((part: Point) => {
-            context.fillStyle = "#00FF00";
-            context.fillRect(part.x, part.y, snakeSize, snakeSize);                        
-        });        
-    };
-
-    const renderFood = () => {
-        context.fillStyle = "#FF0000";
-        context.fillRect(foodPos.x, foodPos.y, snakeSize, snakeSize);
-    };
-
-    const clearCanvas = () => {
-        context.fillStyle = "#000";
-        context.fillRect(0, 0, width, height);        
-    }
-
-    const eatFood = () => {
-        //grow the snake
-        snakePos.push({
-            x: foodPos.x,
-            y: foodPos.y
-        });
-
-        //move the food        
-        let newX = Math.floor((Math.random() * 10000) % (width - snakeSize));
-        let newY = Math.floor((Math.random() * 10000) % (height - snakeSize));
-        newX = newX - (newX % snakeSize);
-        newY = newY - (newY % snakeSize);
-
-        foodPos.x = newX;
-        foodPos.y = newY;        
-        
-        milliSecondDelay = milliSecondDelay * 0.8;
-    };
-
-    const moveSnake = (directionCode: string) => {
-        let newHead : Point = {
-            x: snakePos[0].x,
-            y: snakePos[0].y
-        }
-
-        switch(directionCode)
+    const onKeyboardEvent  = (event : KeyboardEvent) => {
+        let keyCode : KeyCode = KeyCode.NONE;
+        switch(event.key)
         {
             case "ArrowUp":
-                newHead.y -= snakeSize;
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.UP});
+                if(state.lastKnownKeyCode == KeyCode.DOWN) return;
+                keyCode = KeyCode.UP;
                 break;
             case "ArrowDown":
-                newHead.y += snakeSize;
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.DOWN});
+                if(state.lastKnownKeyCode == KeyCode.UP) return;
+                keyCode = KeyCode.DOWN;
                 break;
             case "ArrowLeft":
-                newHead.x -= snakeSize;
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.LEFT});
+                if(state.lastKnownKeyCode == KeyCode.RIGHT) return;
+                keyCode = KeyCode.LEFT;
                 break;
             case "ArrowRight":
-                newHead.x += snakeSize;
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.RIGHT});
+                if(state.lastKnownKeyCode == KeyCode.LEFT) return;
+                keyCode = KeyCode.RIGHT;
                 break;
             case "Escape":
-                props.onGamePause();
-                window.cancelAnimationFrame(handleAnimationFrame);
-                break;
             default:
-                return; //do nothing                
-        }
-                
-        let newSnake: Array<Point> = [];
-        newSnake.push(newHead);
-        for(let i = 1; i < snakePos.length; i++)
-        {
-            newSnake[i] = snakePos[i - 1];
+                //setGameState({...gameState, lastKnownKeyCode: KeyCode.ESC});
+                keyCode = KeyCode.ESC;
+                break;
         }
 
-        snakePos = newSnake;
+        state.lastKnownKeyCode = keyCode;
+        //console.log("Key: ", keyCode.toString());
+    }
 
-        if(newHead.x < 0 || newHead.x >= width)
-        {
-            //game over?
-            console.log("Game Over Width");
-        }
+    const clear = (context: CanvasRenderingContext2D) => {
+        //console.log("RenderTarget clear");
+        context.clearRect(0, 0, state.width, state.height);
+        context.fillStyle = "#000";
+        context.fillRect(0, 0, state.width, state.height);
+    }
 
-        if(newHead.y < 0 || newHead.y >= height)
-        {
-            //game over?
-            console.log("Game Over Height");
-        }
+    const draw = (gameState: GameState, context: CanvasRenderingContext2D) => {
+        //console.log("RenderTarget draw");
 
-        for(let i = 0; i < snakePos.length; i++)
-        {
-            let partA = snakePos[i];
-            for(let j = 0; j < snakePos.length; j++)
+        //snake
+        let first: boolean = false;
+        gameState.snakePosition.forEach((part: Point) => {
+            context.fillStyle = "#00FF00";
+            if(!first)
             {
-                if(i == j) continue;
-
-                let partB = snakePos[j];
-
-                if(partA.x == partB.x && partA.y == partB.y)
-                {
-                    //game over?
-                    console.log("Game Over", partA, partB, snakePos);
-                }
-
+                first = true;
+                //context.fillStyle = "#0000FF";
+                context.strokeStyle = "#0000FF";
+                context.lineWidth = 5;
+                context.strokeRect(part.x, part.y, gameState.cellSize, gameState.cellSize);
             }
+            
+            context.fillRect(part.x, part.y, gameState.cellSize, gameState.cellSize);
+        });
+
+        //food
+        context.fillStyle = "#FF0000";
+        context.fillRect(gameState.foodPosition.x, gameState.foodPosition.y, gameState.cellSize, gameState.cellSize);
+    }
+
+    const moveSnake = () => {
+        let pos : Point = {
+            x: state.snakePosition[0].x,
+            y: state.snakePosition[0].y
         }
 
-        for(let i = 0; i < snakePos.length; i++)
+        switch(state.lastKnownKeyCode)
         {
-            let part = snakePos[i];
-
-            if(part.x == foodPos.x && part.y == foodPos.y)
-            {
-                eatFood();
-            }
+            case KeyCode.UP:
+                pos.y -= state.cellSize;
+                break;
+            case KeyCode.DOWN:
+                pos.y += state.cellSize;
+                break;
+            case KeyCode.LEFT:
+                pos.x -= state.cellSize;
+                break;
+            case KeyCode.RIGHT:
+                pos.x += state.cellSize;
+                break;
+            case KeyCode.NONE:
+            case KeyCode.ESC:
+                return; //do nothing
         }
-
-
+        
+        //new head
+        let newSnakePosition: Point[] = [];
+        newSnakePosition.push(pos);
+        for(let i = 1; i < state.snakePosition.length; i++)
+        {
+            newSnakePosition.push({x: state.snakePosition[i-1].x, y: state.snakePosition[i-1].y});
+        }
+        state.snakePosition = newSnakePosition;
+        //console.log("Moving snake: ", state.snakePosition[0], state.lastKnownKeyCode);
     };
 
-    const onKeyboardEvent = (event: KeyboardEvent) => {
-        console.log(event);
-        lastKnownKey = event.key;
-        //moveSnake(event.key);
+    const getRandomCellPosition = () : Point => {
+        let x: number = 0;
+        let y: number = 0;
+
+        x = Math.floor((Math.random() * 10000) % (state.width - state.cellSize));
+        y = Math.floor((Math.random() * 10000) % (state.height - state.cellSize));
+
+        x = x - (x % state.cellSize);
+        y = y - (y % state.cellSize);
+
+        return {
+            x: x,
+            y: y
+        };
     };
+
+    const tryEatFood = () => {
+        let head = state.snakePosition[0];
+        let food = state.foodPosition;
+
+        if(head.x == food.x && head.y == food.y)
+        {
+            //move it grow the snake
+            let newSnakePos: Point[] = [];
+            
+            //push "food" to snake at its end opposite of the direction
+            let tailPos = state.snakePosition[state.snakePosition.length - 1];
+            let newTailPos : Point = {x: tailPos.x, y: tailPos.y};
+            switch(state.lastKnownKeyCode)
+            {
+                case KeyCode.UP:
+                    newTailPos.y += state.cellSize;
+                    break;
+                case KeyCode.DOWN:
+                    newTailPos.y -= state.cellSize;
+                    break;
+                case KeyCode.LEFT:
+                    newTailPos.x += state.cellSize;
+                    break;
+                case KeyCode.RIGHT:
+                    newTailPos.x -= state.cellSize;
+                    break;
+                case KeyCode.NONE:
+                case KeyCode.ESC:
+                    return; //do nothing
+            }
+        
+            for(let i = 0; i < state.snakePosition.length; i++)
+            {
+                newSnakePos.push({x: state.snakePosition[i].x, y: state.snakePosition[i].y});
+            }
+            newSnakePos.push(newTailPos);
+
+            state.snakePosition = newSnakePos;
+            state.foodPosition = getRandomCellPosition();
+            props.onScoreUpdate();
+        }
+    };
+
+    const checkForGameOver = () => {
+        // if snake is out of bounds
+        let head = state.snakePosition[0];
+        if(head.x > state.width || head.x < 0)
+        {
+            resetGame();
+            props.onGameOver();
+        }
+        else if(head.y > state.height || head.y < 0)
+        {
+            resetGame();
+            props.onGameOver();
+        }
+
+        // if snake is intersecting with itself
+        for(let i = 1; i < state.snakePosition.length; i++)
+        {
+            let part = state.snakePosition[i];
+            if(head.x == part.x && head.y == part.y)
+            {
+                resetGame();
+                props.onGameOver();
+                break;
+            }
+        }
+    };
+
+    const resetGame = () => {
+        state.lastKnownKeyCode = KeyCode.NONE;
+        state.snakePosition = [];
+        state.snakePosition.push(getRandomCellPosition());
+        state.foodPosition = getRandomCellPosition();
+    };
+
+    const render = () => {
+        let now : Date = new Date();
+
+        let dt = now.getTime() - then.getTime();
+        msSinceUpdate += dt;
+
+        then = now;
+
+        clear(context);
+        //console.log(msSinceUpdate, state.updateDelayMS);
+        if(msSinceUpdate > state.updateDelayMS) //make part of prop initial
+        {
+            //move in last known direction
+            moveSnake();
+            //check for food eaten
+            tryEatFood();
+            //check for game over
+            checkForGameOver();
+
+            msSinceUpdate = 0;
+        }
+
+        draw(state, context);
+
+        reqAnimationFrame = window.requestAnimationFrame(render);
+    };
+
+    useEffect(() => {
+        console.log("USE EFFECT GAME");
+        then = new Date();
+        msSinceUpdate = 0;
+        state = {
+            cellSize: 15,
+            height: window.innerHeight,
+            width: window.innerWidth,
+            lastKnownKeyCode: KeyCode.NONE,
+            updateDelayMS: 50,
+            foodPosition: {x: 0, y: 0},
+            snakePosition: [{
+                x: 50,
+                y: 50
+            }]
+        };
+        state.snakePosition[0] = getRandomCellPosition();
+        state.foodPosition = getRandomCellPosition();
+
+        canvas = canvasRef.current;
+        canvas.width = state.width;
+        canvas.height = state.height;
+
+        context = canvas.getContext("2d");
+
+        window.onkeyup = onKeyboardEvent;
+        render();
+
+        return () => {
+            console.log("Cancelling animation frame");
+            window.cancelAnimationFrame(reqAnimationFrame);
+        }
+    }, []);
 
     return (
-        <canvas id="game-screen" ref={canvasRef}></canvas>
-    )    
-}
+        <canvas ref={canvasRef}></canvas>
+    )
+});
 
 export default Game;
